@@ -1,7 +1,7 @@
 # GreenPokerRoom
 
 Plan:
-
+t
 week 1:
 sean server
 rasheed all layouts except for game
