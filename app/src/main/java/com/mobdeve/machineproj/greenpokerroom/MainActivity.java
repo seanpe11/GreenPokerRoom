@@ -28,7 +28,6 @@ public class MainActivity extends AppCompatActivity {
     private EditText raiseamount;
     private Button btn_call, btn_raise, btn_fold;
 
-    private ImageView player1card1, player1card2;
 
     private URI uri = URI.create("http://10.0.0.2:3000");
     private Socket socket = IO.socket(uri);
