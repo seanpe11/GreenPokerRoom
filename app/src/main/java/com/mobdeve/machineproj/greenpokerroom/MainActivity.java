@@ -3,7 +3,10 @@ package com.mobdeve.machineproj.greenpokerroom;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import org.json.JSONObject;
 
@@ -15,6 +18,16 @@ import io.socket.client.Socket;
 
 public class MainActivity extends AppCompatActivity {
     private ArrayList<Card> cardArrayList;
+    private ImageView player1card1, player1card2, player2card1, player2card2, player3card1, player3card2, player4card1, player4card2;
+    private ImageView community1, community2, community3, community4, community5;
+    private TextView player1name, player1stack, player1action;
+    private TextView player2name, player2stack, player2action;
+    private TextView player3name, player3stack, player3action;
+    private TextView player4name, player4stack, player4action;
+    private TextView pot;
+    private EditText raiseamount;
+    private Button btn_call, btn_raise, btn_fold;
+
     private ImageView player1card1, player1card2;
 
     private URI uri = URI.create("http://10.0.0.2:3000");
@@ -32,6 +45,41 @@ public class MainActivity extends AppCompatActivity {
     private void init() {
         player1card1 = findViewById(R.id.player1card1);
         player1card2=findViewById(R.id.player1card2);
+        player2card1 = findViewById(R.id.player2card1);
+        player2card2=findViewById(R.id.player2card2);
+        player3card1 = findViewById(R.id.player3card1);
+        player3card2=findViewById(R.id.player3card2);
+        player4card1 = findViewById(R.id.player4card1);
+        player4card2=findViewById(R.id.player4card2);
+
+        player1name = findViewById(R.id.player1name);
+        player1stack = findViewById(R.id.player1stack);
+        player1action = findViewById(R.id.player1action);
+
+        player2name = findViewById(R.id.player2name);
+        player2stack = findViewById(R.id.player2stack);
+        player2action = findViewById(R.id.player2action);
+
+        player3name = findViewById(R.id.player3name);
+        player3stack = findViewById(R.id.player3stack);
+        player3action = findViewById(R.id.player3action);
+
+        player4name = findViewById(R.id.player4name);
+        player4stack = findViewById(R.id.player4stack);
+        player4action = findViewById(R.id.player4action);
+
+        pot = findViewById(R.id.pot);
+        raiseamount = findViewById(R.id.raiseamount);
+
+        btn_call = findViewById(R.id.btn_call);
+        btn_raise = findViewById(R.id.btn_raise);
+        btn_fold = findViewById(R.id.btn_fold);
+
+        community1 = findViewById(R.id.communitycard1);
+        community2 = findViewById(R.id.communitycard2);
+        community3 = findViewById(R.id.communitycard3);
+        community4 = findViewById(R.id.communitycard4);
+        community5 = findViewById(R.id.communitycard5);
 
         player1card1.setImageResource(cardArrayList.get(0).getImage());
         player1card2.setImageResource(cardArrayList.get(1).getImage());
