@@ -10,7 +10,13 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import org.json.JSONObject;
+
+import java.net.URI;
 import java.util.ArrayList;
+import io.socket.client.IO;
+import io.socket.client.Socket;
+
 
 public class MainActivity extends AppCompatActivity {
     private ArrayList<Card> cardArrayList;
@@ -25,6 +31,11 @@ public class MainActivity extends AppCompatActivity {
     private TextView raiseamount;
     private Button btn_call, btn_raise, btn_fold;
     private SeekBar seekBar;
+
+
+    private URI uri = URI.create("http://10.0.0.2:3000");
+    private Socket socket = IO.socket(uri);
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
