@@ -33,83 +33,23 @@ public class MainActivity extends AppCompatActivity {
         populateCards();
         init();
 
-        
+
     }
 
-    private void init() {
-        player1card1 = findViewById(R.id.player1card1);
-        player1card2=findViewById(R.id.player1card2);
-        player2card1 = findViewById(R.id.player2card1);
-        player2card2=findViewById(R.id.player2card2);
-        player3card1 = findViewById(R.id.player3card1);
-        player3card2=findViewById(R.id.player3card2);
-        player4card1 = findViewById(R.id.player4card1);
-        player4card2=findViewById(R.id.player4card2);
 
-        player1name = findViewById(R.id.player1name);
-        player1stack = findViewById(R.id.player1stack);
-        player1action = findViewById(R.id.player1action);
-
-        player2name = findViewById(R.id.player2name);
-        player2stack = findViewById(R.id.player2stack);
-        player2action = findViewById(R.id.player2action);
-
-        player3name = findViewById(R.id.player3name);
-        player3stack = findViewById(R.id.player3stack);
-        player3action = findViewById(R.id.player3action);
-
-        player4name = findViewById(R.id.player4name);
-        player4stack = findViewById(R.id.player4stack);
-        player4action = findViewById(R.id.player4action);
-
-        pot = findViewById(R.id.pot);
-        raiseamount = findViewById(R.id.raiseamount);
-
-        btn_call = findViewById(R.id.btn_call);
-        btn_raise = findViewById(R.id.btn_raise);
-        btn_fold = findViewById(R.id.btn_fold);
-
-        community1 = findViewById(R.id.communitycard1);
-        community2 = findViewById(R.id.communitycard2);
-        community3 = findViewById(R.id.communitycard3);
-        community4 = findViewById(R.id.communitycard4);
-        community5 = findViewById(R.id.communitycard5);
-        seekBar = findViewById(R.id.seekBar);
-
-        player1card1.setImageResource(cardArrayList.get(0).getImage());
-        player1card2.setImageResource(cardArrayList.get(1).getImage());
-
-        player1name.setText(playerArrayList.get(0).getName());
-        player1stack.setText("" + playerArrayList.get(0).getStack());
-        player1action.setText(playerArrayList.get(0).getAction());
-
-        player2name.setText(playerArrayList.get(1).getName());
-        player2stack.setText(""+ playerArrayList.get(1).getStack());
-        player2action.setText(playerArrayList.get(1).getAction());
-
-        player3name.setText(playerArrayList.get(2).getName());
-        player3stack.setText("" + playerArrayList.get(2).getStack());
-        player3action.setText(playerArrayList.get(2).getAction());
-
-        player4name.setText(playerArrayList.get(3).getName());
-        player4stack.setText("" + playerArrayList.get(3).getStack());
-        player4action.setText(playerArrayList.get(3).getAction());
-
-        seekBar.setVisibility(View.GONE);
-    }
 
     private void populateCards() {
         cardArrayList = new ArrayList<>();
         playerArrayList = new ArrayList<>();
 
-        Player player = new Player("Rasheed", 100, " ");
-        playerArrayList.add(player);
-        player = new Player("Sean", 100, " ");
-        playerArrayList.add(player);
-        player = new Player("Jolo", 100, " ");
-        playerArrayList.add(player);
-        player = new Player("Gabriel", 100, " ");
-        playerArrayList.add(player);
+        Player player1 = new Player("Rasheed", 100, " ");
+        playerArrayList.add(player1);
+        Player player2 = new Player("Sean", 100, " ");
+        playerArrayList.add(player2);
+        Player player3 = new Player("Jolo", 100, " ");
+        playerArrayList.add(player3);
+        Player player4 = new Player("Gabriel", 100, " ");
+        playerArrayList.add(player4);
 
         Card sample = new Card(1, 0, 0, R.drawable.thetwoofclubs);
         cardArrayList.add(sample);
@@ -228,5 +168,68 @@ public class MainActivity extends AppCompatActivity {
         sample = new Card(13, 3, 51, R.drawable.theaceofspades);
         cardArrayList.add(sample);
 
+        
+
+    }
+    private void init() {
+        player1card1 = findViewById(R.id.player1card1);
+        player1card2=findViewById(R.id.player1card2);
+        player2card1 = findViewById(R.id.player2card1);
+        player2card2=findViewById(R.id.player2card2);
+        player3card1 = findViewById(R.id.player3card1);
+        player3card2=findViewById(R.id.player3card2);
+        player4card1 = findViewById(R.id.player4card1);
+        player4card2=findViewById(R.id.player4card2);
+
+        player1name = findViewById(R.id.player1name);
+        player1stack = findViewById(R.id.player1stack);
+        player1action = findViewById(R.id.player1action);
+
+        player2name = findViewById(R.id.player2name);
+        player2stack = findViewById(R.id.player2stack);
+        player2action = findViewById(R.id.player2action);
+
+        player3name = findViewById(R.id.player3name);
+        player3stack = findViewById(R.id.player3stack);
+        player3action = findViewById(R.id.player3action);
+
+        player4name = findViewById(R.id.player4name);
+        player4stack = findViewById(R.id.player4stack);
+        player4action = findViewById(R.id.player4action);
+
+        pot = findViewById(R.id.pot);
+        raiseamount = findViewById(R.id.raiseamount);
+
+        btn_call = findViewById(R.id.btn_call);
+        btn_raise = findViewById(R.id.btn_raise);
+        btn_fold = findViewById(R.id.btn_fold);
+
+        community1 = findViewById(R.id.communitycard1);
+        community2 = findViewById(R.id.communitycard2);
+        community3 = findViewById(R.id.communitycard3);
+        community4 = findViewById(R.id.communitycard4);
+        community5 = findViewById(R.id.communitycard5);
+        seekBar = findViewById(R.id.seekBar);
+
+        player1card1.setImageResource(cardArrayList.get(0).getImage());
+        player1card2.setImageResource(cardArrayList.get(1).getImage());
+
+        player1name.setText(playerArrayList.get(0).getName());
+        player1stack.setText("" + playerArrayList.get(0).getStack());
+        player1action.setText(playerArrayList.get(0).getAction());
+
+        player2name.setText(playerArrayList.get(1).getName());
+        player2stack.setText(""+ playerArrayList.get(1).getStack());
+        player2action.setText(playerArrayList.get(1).getAction());
+
+        player3name.setText(playerArrayList.get(2).getName());
+        player3stack.setText("" + playerArrayList.get(2).getStack());
+        player3action.setText(playerArrayList.get(2).getAction());
+
+        player4name.setText(playerArrayList.get(3).getName());
+        player4stack.setText("" + playerArrayList.get(3).getStack());
+        player4action.setText(playerArrayList.get(3).getAction());
+
+        seekBar.setVisibility(View.GONE);
     }
 }
