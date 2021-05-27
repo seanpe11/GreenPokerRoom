@@ -3,15 +3,18 @@ package com.mobdeve.machineproj.greenpokerroom;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
     private ArrayList<Card> cardArrayList;
+    private ArrayList<Player> playerArrayList;
     private ImageView player1card1, player1card2, player2card1, player2card2, player3card1, player3card2, player4card1, player4card2;
     private ImageView community1, community2, community3, community4, community5;
     private TextView player1name, player1stack, player1action;
@@ -19,8 +22,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView player3name, player3stack, player3action;
     private TextView player4name, player4stack, player4action;
     private TextView pot;
-    private EditText raiseamount;
+    private TextView raiseamount;
     private Button btn_call, btn_raise, btn_fold;
+    private SeekBar seekBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +32,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         populateCards();
         init();
+
+        
     }
 
     private void init() {
@@ -68,14 +74,42 @@ public class MainActivity extends AppCompatActivity {
         community3 = findViewById(R.id.communitycard3);
         community4 = findViewById(R.id.communitycard4);
         community5 = findViewById(R.id.communitycard5);
+        seekBar = findViewById(R.id.seekBar);
 
         player1card1.setImageResource(cardArrayList.get(0).getImage());
         player1card2.setImageResource(cardArrayList.get(1).getImage());
 
+        player1name.setText(playerArrayList.get(0).getName());
+        player1stack.setText("" + playerArrayList.get(0).getStack());
+        player1action.setText(playerArrayList.get(0).getAction());
+
+        player2name.setText(playerArrayList.get(1).getName());
+        player2stack.setText(""+ playerArrayList.get(1).getStack());
+        player2action.setText(playerArrayList.get(1).getAction());
+
+        player3name.setText(playerArrayList.get(2).getName());
+        player3stack.setText("" + playerArrayList.get(2).getStack());
+        player3action.setText(playerArrayList.get(2).getAction());
+
+        player4name.setText(playerArrayList.get(3).getName());
+        player4stack.setText("" + playerArrayList.get(3).getStack());
+        player4action.setText(playerArrayList.get(3).getAction());
+
+        seekBar.setVisibility(View.GONE);
     }
 
     private void populateCards() {
         cardArrayList = new ArrayList<>();
+        playerArrayList = new ArrayList<>();
+
+        Player player = new Player("Rasheed", 100, " ");
+        playerArrayList.add(player);
+        player = new Player("Sean", 100, " ");
+        playerArrayList.add(player);
+        player = new Player("Jolo", 100, " ");
+        playerArrayList.add(player);
+        player = new Player("Gabriel", 100, " ");
+        playerArrayList.add(player);
 
         Card sample = new Card(1, 0, 0, R.drawable.thetwoofclubs);
         cardArrayList.add(sample);
