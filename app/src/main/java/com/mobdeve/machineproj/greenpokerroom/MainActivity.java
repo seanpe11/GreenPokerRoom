@@ -2,7 +2,6 @@ package com.mobdeve.machineproj.greenpokerroom;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -45,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private URI uri = URI.create("https://greenpokerroom.herokuapp.com/");
     private Socket socket = IO.socket(uri);
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
         socket.on("JOIN_CONFIRM", join_confirmed);
         socket.connect();
         init();
+
+        
     }
 
     private void init() {
@@ -331,8 +333,7 @@ public class MainActivity extends AppCompatActivity {
         cardArrayList.add(sample);
         sample = new Card(13, 1, 25, R.drawable.theaceofdiamonds);
         cardArrayList.add(sample);
-        // hearts, index 26-38
-        sample = new Card(1, 2, 26, R.drawable.thetwoofhearts);
+        sample = new Card(7, 2, 26, R.drawable.theeightofhearts);
         cardArrayList.add(sample);
         sample = new Card(2, 2, 27, R.drawable.thethreeofhearts);
         cardArrayList.add(sample);
