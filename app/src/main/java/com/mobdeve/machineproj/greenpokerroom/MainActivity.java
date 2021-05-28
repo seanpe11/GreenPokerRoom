@@ -2,6 +2,7 @@ package com.mobdeve.machineproj.greenpokerroom;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -10,12 +11,15 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.net.URI;
 import java.util.ArrayList;
 import io.socket.client.IO;
 import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -32,30 +36,38 @@ public class MainActivity extends AppCompatActivity {
     private Button btn_call, btn_raise, btn_fold;
     private SeekBar seekBar;
 
+    private String user_name;
+    private int player_pos;
+    private int currentTurn;
 
-    private URI uri = URI.create("http://10.0.0.2:3000");
+
+
+    private URI uri = URI.create("https://greenpokerroom.herokuapp.com/");
     private Socket socket = IO.socket(uri);
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         populateCards();
-        init();
 
-        
+        // event listens
+        socket.on("PLAYER_ACTION", playerAction);
+        socket.on("NEW_GAME", resetGame);
+        socket.on("JOIN_CONFIRM", join_confirmed);
+        socket.connect();
+        init();
     }
 
     private void init() {
         player1card1 = findViewById(R.id.player1card1);
-        player1card2=findViewById(R.id.player1card2);
+        player1card2 = findViewById(R.id.player1card2);
         player2card1 = findViewById(R.id.player2card1);
-        player2card2=findViewById(R.id.player2card2);
+        player2card2 = findViewById(R.id.player2card2);
         player3card1 = findViewById(R.id.player3card1);
-        player3card2=findViewById(R.id.player3card2);
+        player3card2 = findViewById(R.id.player3card2);
         player4card1 = findViewById(R.id.player4card1);
-        player4card2=findViewById(R.id.player4card2);
+        player4card2 = findViewById(R.id.player4card2);
 
         player1name = findViewById(R.id.player1name);
         player1stack = findViewById(R.id.player1stack);
@@ -77,7 +89,33 @@ public class MainActivity extends AppCompatActivity {
         raiseamount = findViewById(R.id.raiseamount);
 
         btn_call = findViewById(R.id.btn_call);
+        btn_call.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    JSONObject player = new JSONObject();
+                    player.put("name", "Sean");
+                    player.put("stack", 100);
+                    socket.emit("PLAYER_JOIN", player);
+                } catch (JSONException e){
+                    e.printStackTrace();
+                }
+            }
+        });
         btn_raise = findViewById(R.id.btn_raise);
+        btn_raise.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    JSONObject blinds = new JSONObject();
+                    blinds.put("sb", 1);
+                    blinds.put("bb", 2);
+                    socket.emit("START_GAME", blinds);
+                } catch (JSONException e){
+                    e.printStackTrace();
+                }
+            }
+        });
         btn_fold = findViewById(R.id.btn_fold);
 
         community1 = findViewById(R.id.communitycard1);
@@ -109,6 +147,123 @@ public class MainActivity extends AppCompatActivity {
         seekBar.setVisibility(View.GONE);
     }
 
+    private void updateGame(JSONObject game) throws JSONException {
+        // update game state with object here
+        // set game state variables
+        currentTurn = game.getInt("currentBet");
+
+        // update player names and chip counts
+
+        JSONArray players_json = game.getJSONArray("players");
+            // TODO all the player names and logic
+        player1name.setText("");
+
+        // update board and last action
+        JSONArray board = game.getJSONArray("board");
+
+            // update community cards
+        if (game.getInt("phase") > 0){ // flop
+            community1.setImageResource(board.getJSONObject(0).getInt("numval"));
+            community2.setImageResource(board.getJSONObject(1).getInt("numval"));
+            community3.setImageResource(board.getJSONObject(2).getInt("numval"));
+        } else {
+            community1.setImageResource(R.drawable.playingcardback);
+            community2.setImageResource(R.drawable.playingcardback);
+            community3.setImageResource(R.drawable.playingcardback);
+        }
+        if (game.getInt("phase") > 1){ // turn
+            community4.setImageResource(board.getJSONObject(3).getInt("numval"));
+        } else {
+            community4.setImageResource(R.drawable.playingcardback);
+        }
+        if (game.getInt("phase") > 2){ // river
+            community5.setImageResource(board.getJSONObject(4).getInt("numval"));
+        } else {
+            community5.setImageResource(R.drawable.playingcardback);
+        }
+        if (game.getInt("phase") > 3){ // showdown
+            // show cards of unfolded players for showdown
+            JSONArray unfolded = game.getJSONArray("unfolded");
+            for (int i=0;i<unfolded.length();i++){
+                int playerINT  = unfolded.getInt(i);
+                if (playerINT == 0){
+                    JSONObject player1 = players_json.getJSONObject(playerINT);
+                    player1card1.setImageResource(cardArrayList.get(player1.getJSONObject("hand1").getInt("numval")).getImage());
+                    player1card2.setImageResource(cardArrayList.get(player1.getJSONObject("hand2").getInt("numval")).getImage());
+                }
+                if (playerINT == 1){
+                    JSONObject player2 = players_json.getJSONObject(playerINT);
+                    player2card1.setImageResource(cardArrayList.get(player2.getJSONObject("hand1").getInt("numval")).getImage());
+                    player2card2.setImageResource(cardArrayList.get(player2.getJSONObject("hand2").getInt("numval")).getImage());
+                }
+                if (playerINT == 2){
+                    JSONObject player3 = players_json.getJSONObject(playerINT);
+                    player3card1.setImageResource(cardArrayList.get(player3.getJSONObject("hand1").getInt("numval")).getImage());
+                    player3card2.setImageResource(cardArrayList.get(player3.getJSONObject("hand2").getInt("numval")).getImage());
+                }
+                if (playerINT == 3){
+                    JSONObject player4 = players_json.getJSONObject(playerINT);
+                    player4card1.setImageResource(cardArrayList.get(player4.getJSONObject("hand1").getInt("numval")).getImage());
+                    player4card2.setImageResource(cardArrayList.get(player4.getJSONObject("hand2").getInt("numval")).getImage());
+                }
+            }
+
+        } else {
+
+        }
+
+
+            // update pot and last raise
+        pot.setText(""+game.getInt("pot"));
+        raiseamount.setText(""+game.getInt("currentbet"));
+
+        // set current player hand to display
+        JSONObject curplayer = players_json.getJSONObject(player_pos);
+        player1card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+        player1card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+
+    }
+
+
+
+    // event handlers
+    private Emitter.Listener playerAction = new Emitter.Listener(){
+        @Override
+        public void call(Object... args){
+            JSONObject object = (JSONObject)args[0];
+            try {
+                updateGame(object);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+
+    private Emitter.Listener resetGame = new Emitter.Listener(){
+        @Override
+        public void call(Object... args){
+            JSONObject object = (JSONObject)args[0];
+            try {
+                updateGame(object);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+
+    private Emitter.Listener join_confirmed = new Emitter.Listener(){
+        @Override
+        public void call(Object... args){
+            JSONObject object = (JSONObject)args[0];
+            try {
+                player_pos = object.getInt("playerPos");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+
+    // setting card images for the layout
     private void populateCards() {
         cardArrayList = new ArrayList<>();
         playerArrayList = new ArrayList<>();
@@ -122,119 +277,111 @@ public class MainActivity extends AppCompatActivity {
         player = new Player("Gabriel", 100, " ");
         playerArrayList.add(player);
 
+        // clubs, index 0-12
         Card sample = new Card(1, 0, 0, R.drawable.thetwoofclubs);
         cardArrayList.add(sample);
-        sample = new Card(1, 1, 1, R.drawable.thetwoofdiamonds);
+        sample = new Card(2, 0, 1, R.drawable.thethreeofclubs);
         cardArrayList.add(sample);
-        sample = new Card(1, 2, 2, R.drawable.thetwoofhearts);
+        sample = new Card(3, 0, 2, R.drawable.thefourofclubs);
         cardArrayList.add(sample);
-        sample = new Card(1, 3, 3, R.drawable.thetwoofspades);
+        sample = new Card(4, 0, 3, R.drawable.thefiveofclubs);
         cardArrayList.add(sample);
-
-        sample = new Card(2, 0, 4, R.drawable.thethreeofclubs);
+        sample = new Card(5, 0, 4, R.drawable.thesixofclubs);
         cardArrayList.add(sample);
-        sample = new Card(2, 1, 5, R.drawable.thethreeofdiamonds);
+        sample = new Card(6, 0, 5, R.drawable.thesevenofclubs);
         cardArrayList.add(sample);
-        sample = new Card(2, 2, 6, R.drawable.thethreeofhearts);
+        sample = new Card(7, 0, 6, R.drawable.theeightofclubs);
         cardArrayList.add(sample);
-        sample = new Card(2, 3, 7, R.drawable.thethreeofspades);
+        sample = new Card(8, 0, 7, R.drawable.thenineofclubs);
         cardArrayList.add(sample);
-
-        sample = new Card(3, 0, 8, R.drawable.thefourofclubs);
+        sample = new Card(9, 0, 8, R.drawable.thetenofclubs);
         cardArrayList.add(sample);
-        sample = new Card(3, 1, 9, R.drawable.thefourofdiamonds);
+        sample = new Card(10, 0, 9, R.drawable.thejackofclubs);
         cardArrayList.add(sample);
-        sample = new Card(3, 2, 10, R.drawable.thefourofhearts);
+        sample = new Card(11, 3, 10, R.drawable.thequeenofclubs);
         cardArrayList.add(sample);
-        sample = new Card(3, 3, 11, R.drawable.thefourofspades);
+        sample = new Card(12, 3, 11, R.drawable.thekingofclubs);
         cardArrayList.add(sample);
-
-        sample = new Card(4, 0, 12, R.drawable.thefiveofclubs);
+        sample = new Card(13, 0, 12, R.drawable.theaceofclubs);
         cardArrayList.add(sample);
-        sample = new Card(4, 1, 13, R.drawable.thefiveofdiamonds);
+        // diamonds, index 13-25
+        sample = new Card(1, 1, 13, R.drawable.thetwoofdiamonds);
         cardArrayList.add(sample);
-        sample = new Card(4, 2, 14, R.drawable.thefiveofhearts);
+        sample = new Card(2, 1, 14, R.drawable.thethreeofdiamonds);
         cardArrayList.add(sample);
-        sample = new Card(4, 3, 15, R.drawable.thefiveofspades);
+        sample = new Card(3, 1, 15, R.drawable.thefourofdiamonds);
         cardArrayList.add(sample);
-
-        sample = new Card(5, 0, 16, R.drawable.thesixofclubs);
+        sample = new Card(4, 1, 16, R.drawable.thefiveofdiamonds);
         cardArrayList.add(sample);
         sample = new Card(5, 1, 17, R.drawable.thesixofdiamonds);
         cardArrayList.add(sample);
-        sample = new Card(5, 2, 18, R.drawable.thesixofhearts);
+        sample = new Card(6, 1, 18, R.drawable.thesevenofdiamonds);
         cardArrayList.add(sample);
-        sample = new Card(5, 3, 19, R.drawable.thesixofspades);
+        sample = new Card(7, 1, 19, R.drawable.theeightofdiamonds);
         cardArrayList.add(sample);
-
-        sample = new Card(6, 0, 20, R.drawable.thesevenofclubs);
+        sample = new Card(8, 1, 20, R.drawable.thenineofdiamonds);
         cardArrayList.add(sample);
-        sample = new Card(6, 1, 21, R.drawable.thesevenofdiamonds);
+        sample = new Card(9, 1, 21, R.drawable.thetenofdiamonds);
         cardArrayList.add(sample);
-        sample = new Card(6, 2, 22, R.drawable.thesevenofhearts);
+        sample = new Card(10, 1, 22, R.drawable.thejackofdiamonds);
         cardArrayList.add(sample);
-        sample = new Card(6, 3, 23, R.drawable.thesevenofspades);
+        sample = new Card(11, 1, 23, R.drawable.thequeenofdiamonds);
         cardArrayList.add(sample);
-
-        sample = new Card(7, 0, 24, R.drawable.theeightofclubs);
+        sample = new Card(12, 1, 24, R.drawable.thekingofdiamonds);
         cardArrayList.add(sample);
-        sample = new Card(7, 1, 25, R.drawable.theeightofdiamonds);
+        sample = new Card(13, 1, 25, R.drawable.theaceofdiamonds);
         cardArrayList.add(sample);
-        sample = new Card(7, 2, 26, R.drawable.theeightofhearts);
+        // hearts, index 26-38
+        sample = new Card(1, 2, 26, R.drawable.thetwoofhearts);
         cardArrayList.add(sample);
-        sample = new Card(7, 3, 27, R.drawable.theeightofspades);
+        sample = new Card(2, 2, 27, R.drawable.thethreeofhearts);
         cardArrayList.add(sample);
-
-        sample = new Card(8, 0, 28, R.drawable.thenineofclubs);
+        sample = new Card(3, 2, 28, R.drawable.thefourofhearts);
         cardArrayList.add(sample);
-        sample = new Card(8, 1, 29, R.drawable.thenineofdiamonds);
+        sample = new Card(4, 2, 29, R.drawable.thefiveofhearts);
         cardArrayList.add(sample);
-        sample = new Card(8, 2, 30, R.drawable.thenineofhearts);
+        sample = new Card(5, 2, 30, R.drawable.thesixofhearts);
         cardArrayList.add(sample);
-        sample = new Card(8, 3, 31, R.drawable.thenineofspades);
+        sample = new Card(6, 2, 31, R.drawable.thesevenofhearts);
         cardArrayList.add(sample);
-
-        sample = new Card(9, 0, 32, R.drawable.thetenofclubs);
+        sample = new Card(7, 2, 32, R.drawable.theeightofhearts);
         cardArrayList.add(sample);
-        sample = new Card(9, 1, 33, R.drawable.thetenofdiamonds);
+        sample = new Card(8, 2, 33, R.drawable.thenineofhearts);
         cardArrayList.add(sample);
         sample = new Card(9, 2, 34, R.drawable.thetenofhearts);
         cardArrayList.add(sample);
-        sample = new Card(9, 3, 35, R.drawable.thetenofspades);
+        sample = new Card(10, 2, 35, R.drawable.thejackofhearts);
         cardArrayList.add(sample);
-
-        sample = new Card(10, 0, 36, R.drawable.thejackofclubs);
+        sample = new Card(11, 2, 36, R.drawable.thequeenofhearts);
         cardArrayList.add(sample);
-        sample = new Card(10, 1, 37, R.drawable.thejackofdiamonds);
+        sample = new Card(12, 2, 37, R.drawable.thekingofhearts);
         cardArrayList.add(sample);
-        sample = new Card(10, 2, 38, R.drawable.thejackofhearts);
+        sample = new Card(13, 2, 38, R.drawable.theaceofhearts);
         cardArrayList.add(sample);
-        sample = new Card(10, 3, 39, R.drawable.thejackofspades);
+        // spades, index 39-51
+        sample = new Card(1, 3, 39, R.drawable.thetwoofspades);
         cardArrayList.add(sample);
-
-        sample = new Card(11, 0, 40, R.drawable.thequeenofclubs);
+        sample = new Card(2, 3, 40, R.drawable.thethreeofspades);
         cardArrayList.add(sample);
-        sample = new Card(11, 1, 41, R.drawable.thequeenofdiamonds);
+        sample = new Card(3, 3, 41, R.drawable.thefourofspades);
         cardArrayList.add(sample);
-        sample = new Card(11, 2, 42, R.drawable.thequeenofhearts);
+        sample = new Card(4, 3, 42, R.drawable.thefiveofspades);
         cardArrayList.add(sample);
-        sample = new Card(11, 3, 43, R.drawable.thequeenofspades);
+        sample = new Card(5, 3, 43, R.drawable.thesixofspades);
         cardArrayList.add(sample);
-
-        sample = new Card(12, 0, 44, R.drawable.thekingofclubs);
+        sample = new Card(6, 3, 44, R.drawable.thesevenofspades);
         cardArrayList.add(sample);
-        sample = new Card(12, 1, 45, R.drawable.thekingofdiamonds);
+        sample = new Card(7, 3, 45, R.drawable.theeightofspades);
         cardArrayList.add(sample);
-        sample = new Card(12, 2, 46, R.drawable.thekingofhearts);
+        sample = new Card(8, 3, 46, R.drawable.thenineofspades);
         cardArrayList.add(sample);
-        sample = new Card(12, 3, 47, R.drawable.thekingofspades);
+        sample = new Card(9, 3, 47, R.drawable.thetenofspades);
         cardArrayList.add(sample);
-
-        sample = new Card(13, 0, 48, R.drawable.theaceofclubs);
+        sample = new Card(10, 3, 48, R.drawable.thejackofspades);
         cardArrayList.add(sample);
-        sample = new Card(13, 1, 49, R.drawable.theaceofdiamonds);
+        sample = new Card(11, 3, 49, R.drawable.thequeenofspades);
         cardArrayList.add(sample);
-        sample = new Card(13, 2, 50, R.drawable.theaceofhearts);
+        sample = new Card(12, 3, 50, R.drawable.thekingofclubs);
         cardArrayList.add(sample);
         sample = new Card(13, 3, 51, R.drawable.theaceofspades);
         cardArrayList.add(sample);
