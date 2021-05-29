@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private String user_name;
     private int player_pos;
     private int currentTurn;
+    private int toAct, stack;
 
     public final String TAG = "SOCKET";
 
@@ -61,6 +62,30 @@ public class MainActivity extends AppCompatActivity {
         socket.on("JOIN_CONFIRM", join_confirmed);
         socket.connect();
         init();
+        try {
+            JSONObject player1 = new JSONObject();
+            player1.put("name", player1name.getText().toString());
+            player1.put("stack", player1stack.getText().toString());
+            socket.emit("PLAYER_JOIN", player1);
+            JSONObject player2 = new JSONObject();
+            player2.put("name", player2name.getText().toString());
+            player2.put("stack", player2stack.getText().toString());
+            socket.emit("PLAYER_JOIN", player2);
+            JSONObject player3 = new JSONObject();
+            player3.put("name", player3name.getText().toString());
+            player3.put("stack", player3stack.getText().toString());
+            socket.emit("PLAYER_JOIN", player3);
+            JSONObject player4 = new JSONObject();
+            player4.put("name", player4name.getText().toString());
+            player4.put("stack", player4stack.getText().toString());
+            socket.emit("PLAYER_JOIN", player4);
+            JSONObject blinds = new JSONObject();
+            blinds.put("sb", 1);
+            blinds.put("bb", 2);
+            socket.emit("START_GAME", blinds);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
         
     }
@@ -98,31 +123,32 @@ public class MainActivity extends AppCompatActivity {
         btn_call.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    JSONObject player = new JSONObject();
-                    player.put("name", "Sean");
-                    player.put("stack", 100);
-                    socket.emit("PLAYER_JOIN", player);
-                } catch (JSONException e){
-                    e.printStackTrace();
-                }
+
             }
         });
         btn_raise = findViewById(R.id.btn_raise);
         btn_raise.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    JSONObject blinds = new JSONObject();
-                    blinds.put("sb", 1);
-                    blinds.put("bb", 2);
-                    socket.emit("START_GAME", blinds);
-                } catch (JSONException e){
-                    e.printStackTrace();
-                }
+
             }
         });
         btn_fold = findViewById(R.id.btn_fold);
+//        btn_fold.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//
+//                try {
+//                    JSONObject fold = new JSONObject();
+//                    fold.put("action", "FOLD");
+//                    socket.emit("PLAYER_ACTION", fold );
+//
+//                } catch (JSONException e) {
+//                    e.printStackTrace();
+//                }
+//
+//            }
+//        });
 
         community1 = findViewById(R.id.communitycard1);
         community2 = findViewById(R.id.communitycard2);
@@ -158,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
         // set game state variables
 
         currentTurn = game.getInt("currentBet");
+        toAct = game.getInt("toact");
 
         // update player names and chip counts
 
@@ -168,50 +195,98 @@ public class MainActivity extends AppCompatActivity {
         player1name.setText(curplayer.getString("name"));
         if (game.getInt("button") == 0)
             player1name.append(" (D)");
-        if (game.getInt("smallblind") == 0)
+        if (game.getInt("smallblind") == 0) {
+            stack = 0;
+            stack = curplayer.getInt("stack") - game.getInt("sb");
+            Log.i(TAG, "Stack" + stack);
             player1name.append(" (SB)");
-        if (game.getInt("bigblind") == 0)
+            playerArrayList.get(0).setStack(stack);
+            player1stack.setText(""+ stack);
+        }
+        if (game.getInt("bigblind") == 0) {
             player1name.append(" (BB)");
+            stack = 0;
+            stack = curplayer.getInt("stack") - game.getInt("bb");
+            Log.i(TAG, "Stack" + stack);
+            playerArrayList.get(0).setStack(stack);
+            player1stack.setText(""+ stack);
+        }
 //        player1stack.setText(String.valueOf(curplayer.getInt("stack")));
         curplayer = players_json.getJSONObject(1);
         player2name.setText(curplayer.getString("name"));
         if (game.getInt("button") == 1)
             player2name.append(" (D)");
-        if (game.getInt("smallblind") == 1)
+        if (game.getInt("smallblind") == 1) {
             player2name.append(" (SB)");
-        if (game.getInt("bigblind") == 1)
+            stack = 0;
+            stack = curplayer.getInt("stack") - game.getInt("sb");
+            Log.i(TAG, "Stack" + stack);
+            playerArrayList.get(1).setStack(stack);
+            player2stack.setText(""+ stack);
+        }
+        if (game.getInt("bigblind") == 1) {
             player2name.append(" (BB)");
+            stack = 0;
+            stack = curplayer.getInt("stack") - game.getInt("bb");
+            Log.i(TAG, "Stack" + stack);
+            playerArrayList.get(1).setStack(stack);
+            player2stack.setText(""+ stack);
+        }
         curplayer = players_json.getJSONObject(2);
         player3name.setText(curplayer.getString("name"));
         if (game.getInt("button") == 2)
             player3name.append(" (D)");
-        if (game.getInt("smallblind") == 2)
+        if (game.getInt("smallblind") == 2) {
             player3name.append(" (SB)");
-        if (game.getInt("bigblind") == 2)
+            stack = 0;
+            stack = curplayer.getInt("stack") - game.getInt("sb");
+            Log.i(TAG, "Stack" + stack);
+            playerArrayList.get(2).setStack(stack);
+            player3stack.setText(""+ stack);
+        }
+        if (game.getInt("bigblind") == 2) {
             player3name.append(" (BB)");
+            stack = 0;
+//            stack = ;
+            Log.i(TAG, "Stack" + stack);
+            playerArrayList.get(2).setStack(curplayer.getInt("stack") - game.getInt("bb"));
+            player3stack.setText(""+ playerArrayList.get(2).getStack());
+        }
         curplayer = players_json.getJSONObject(3);
         player4name.setText(curplayer.getString("name"));
         if (game.getInt("button") == 3)
             player4name.append(" (D)");
-        if (game.getInt("smallblind") == 3)
+        if (game.getInt("smallblind") == 3) {
             player4name.append(" (SB)");
-        if (game.getInt("bigblind") == 3)
+            stack = 0;
+            stack = curplayer.getInt("stack") - game.getInt("sb");
+            Log.i(TAG, "Stack" + stack);
+            playerArrayList.get(3).setStack(stack);
+            player4stack.setText(""+ stack);
+        }
+        if (game.getInt("bigblind") == 3) {
             player4name.append(" (BB)");
+            stack = 0;
+            stack = curplayer.getInt("stack") - game.getInt("bb");
+            Log.i(TAG, "Stack" + stack);
+            playerArrayList.get(3).setStack(stack);
+            player4stack.setText(""+ stack);
+        }
 
         // display current player hand
         curplayer = players_json.getJSONObject(0); // change to playerpos
         player1card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
         player1card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
 
-//        curplayer = players_json.getJSONObject(1);
-//        player2card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
-//        player2card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
-//        curplayer = players_json.getJSONObject(2);
-//        player3card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
-//        player3card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
-//        curplayer = players_json.getJSONObject(3);
-//        player4card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
-//        player4card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+        curplayer = players_json.getJSONObject(1);
+        player2card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+        player2card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+        curplayer = players_json.getJSONObject(2);
+        player3card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+        player3card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+        curplayer = players_json.getJSONObject(3);
+        player4card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+        player4card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
 
 
         Log.i(TAG, "Players info updated" + players_json.toString());
@@ -224,6 +299,8 @@ public class MainActivity extends AppCompatActivity {
         // update pot and last raise
         pot.setText("Pot: " + game.getInt("pot") + " chips");
         raiseamount.setText(game.getInt("currentBet") + " chips to call");
+
+
 
         // update community cards
         // flop
@@ -323,13 +400,13 @@ public class MainActivity extends AppCompatActivity {
         cardArrayList = new ArrayList<>();
         playerArrayList = new ArrayList<>();
 
-        Player player = new Player("Rasheed", 100, " ");
+        Player player = new Player("Drake", 100, " ");
         playerArrayList.add(player);
-        player = new Player("Sean", 100, " ");
+        player = new Player("J Cole", 100," ");
         playerArrayList.add(player);
-        player = new Player("Jolo", 100, " ");
+        player = new Player("XXX", 100, " ");
         playerArrayList.add(player);
-        player = new Player("Gabriel", 100, " ");
+        player = new Player("BlueFace", 100, " ");
         playerArrayList.add(player);
 
         // clubs, index 0-12
