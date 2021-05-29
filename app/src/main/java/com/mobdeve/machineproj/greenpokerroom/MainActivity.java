@@ -3,6 +3,7 @@ package com.mobdeve.machineproj.greenpokerroom;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -39,9 +40,12 @@ public class MainActivity extends AppCompatActivity {
     private int player_pos;
     private int currentTurn;
 
+    public final String TAG = "SOCKET";
 
 
-    private URI uri = URI.create("https://greenpokerroom.herokuapp.com/");
+
+    private URI uri = URI.create("https://greenpokerroom.herokuapp.com/"); // live URI
+//    private URI uri = URI.create("http://10.0.2.2:3000"); // test URI
     private Socket socket = IO.socket(uri);
 
 
@@ -149,41 +153,103 @@ public class MainActivity extends AppCompatActivity {
         seekBar.setVisibility(View.GONE);
     }
 
-    private void updateGame(JSONObject game) throws JSONException {
+    private void updateGame(JSONObject game) throws JSONException  {
         // update game state with object here
         // set game state variables
+
         currentTurn = game.getInt("currentBet");
 
         // update player names and chip counts
 
         JSONArray players_json = game.getJSONArray("players");
-            // TODO all the player names and logic
-        player1name.setText("");
+        JSONObject curplayer;
+
+        curplayer = players_json.getJSONObject(0);
+        player1name.setText(curplayer.getString("name"));
+        if (game.getInt("button") == 0)
+            player1name.append(" (D)");
+        if (game.getInt("smallblind") == 0)
+            player1name.append(" (SB)");
+        if (game.getInt("bigblind") == 0)
+            player1name.append(" (BB)");
+//        player1stack.setText(String.valueOf(curplayer.getInt("stack")));
+        curplayer = players_json.getJSONObject(1);
+        player2name.setText(curplayer.getString("name"));
+        if (game.getInt("button") == 1)
+            player2name.append(" (D)");
+        if (game.getInt("smallblind") == 1)
+            player2name.append(" (SB)");
+        if (game.getInt("bigblind") == 1)
+            player2name.append(" (BB)");
+        curplayer = players_json.getJSONObject(2);
+        player3name.setText(curplayer.getString("name"));
+        if (game.getInt("button") == 2)
+            player3name.append(" (D)");
+        if (game.getInt("smallblind") == 2)
+            player3name.append(" (SB)");
+        if (game.getInt("bigblind") == 2)
+            player3name.append(" (BB)");
+        curplayer = players_json.getJSONObject(3);
+        player4name.setText(curplayer.getString("name"));
+        if (game.getInt("button") == 3)
+            player4name.append(" (D)");
+        if (game.getInt("smallblind") == 3)
+            player4name.append(" (SB)");
+        if (game.getInt("bigblind") == 3)
+            player4name.append(" (BB)");
+
+        // display current player hand
+        curplayer = players_json.getJSONObject(0); // change to playerpos
+        player1card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+        player1card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+
+//        curplayer = players_json.getJSONObject(1);
+//        player2card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+//        player2card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+//        curplayer = players_json.getJSONObject(2);
+//        player3card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+//        player3card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+//        curplayer = players_json.getJSONObject(3);
+//        player4card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+//        player4card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+
+
+        Log.i(TAG, "Players info updated" + players_json.toString());
 
         // update board and last action
-        JSONArray board = game.getJSONArray("board");
 
-            // update community cards
-        if (game.getInt("phase") > 0){ // flop
-            community1.setImageResource(board.getJSONObject(0).getInt("numval"));
-            community2.setImageResource(board.getJSONObject(1).getInt("numval"));
-            community3.setImageResource(board.getJSONObject(2).getInt("numval"));
+        Log.i(TAG, "Updating game info" + game.toString());
+
+        JSONArray board = game.getJSONArray("board");
+        // update pot and last raise
+        pot.setText("Pot: " + game.getInt("pot") + " chips");
+        raiseamount.setText(game.getInt("currentBet") + " chips to call");
+
+        // update community cards
+        // flop
+        if (game.getInt("phase") > 0){
+            community1.setImageResource(cardArrayList.get(board.getJSONObject(0).getInt("numval")).getImage());
+            community2.setImageResource(cardArrayList.get(board.getJSONObject(1).getInt("numval")).getImage());
+            community3.setImageResource(cardArrayList.get(board.getJSONObject(2).getInt("numval")).getImage());
         } else {
             community1.setImageResource(R.drawable.playingcardback);
             community2.setImageResource(R.drawable.playingcardback);
             community3.setImageResource(R.drawable.playingcardback);
         }
-        if (game.getInt("phase") > 1){ // turn
-            community4.setImageResource(board.getJSONObject(3).getInt("numval"));
+        // turn
+        if (game.getInt("phase") > 1){
+            community4.setImageResource(cardArrayList.get(board.getJSONObject(3).getInt("numval")).getImage());
         } else {
             community4.setImageResource(R.drawable.playingcardback);
         }
-        if (game.getInt("phase") > 2){ // river
-            community5.setImageResource(board.getJSONObject(4).getInt("numval"));
+        // river
+        if (game.getInt("phase") > 2){
+            community5.setImageResource(cardArrayList.get(board.getJSONObject(4).getInt("numval")).getImage());
         } else {
             community5.setImageResource(R.drawable.playingcardback);
         }
-        if (game.getInt("phase") > 3){ // showdown
+        // showdown
+        if (game.getInt("phase") > 3){
             // show cards of unfolded players for showdown
             JSONArray unfolded = game.getJSONArray("unfolded");
             for (int i=0;i<unfolded.length();i++){
@@ -209,20 +275,7 @@ public class MainActivity extends AppCompatActivity {
                     player4card2.setImageResource(cardArrayList.get(player4.getJSONObject("hand2").getInt("numval")).getImage());
                 }
             }
-
-        } else {
-
         }
-
-
-            // update pot and last raise
-        pot.setText(""+game.getInt("pot"));
-        raiseamount.setText(""+game.getInt("currentbet"));
-
-        // set current player hand to display
-        JSONObject curplayer = players_json.getJSONObject(player_pos);
-        player1card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
-        player1card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
 
     }
 
