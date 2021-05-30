@@ -272,11 +272,11 @@
 
             <Button
                 android:id="@+id/btn_call"
-                android:layout_marginLeft="30dp"
                 android:layout_width="100dp"
                 android:layout_height="60dp"
-                android:text="Call/Check"
-                android:backgroundTint="#107714"/>
+                android:layout_marginLeft="30dp"
+                android:backgroundTint="#107714"
+                android:text="Call/Check" />
 
             <Button
                 android:id="@+id/btn_raise"
@@ -285,13 +285,15 @@
                 android:layout_marginLeft="10dp"
                 android:backgroundTint="#A1920E"
                 android:text="Raise" />
+
             <Button
                 android:id="@+id/btn_fold"
-                android:layout_marginLeft="10dp"
                 android:layout_width="100dp"
                 android:layout_height="60dp"
-                android:text="Fold"
-                android:backgroundTint="#CD1414"/>
+                android:layout_marginLeft="10dp"
+                android:backgroundTint="#CD1414"
+                android:clickable="false"
+                android:text="Fold" />
 
         </LinearLayout>
 
