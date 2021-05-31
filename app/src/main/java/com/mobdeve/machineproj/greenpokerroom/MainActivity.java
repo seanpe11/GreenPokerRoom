@@ -5,8 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -50,13 +48,11 @@ public class MainActivity extends AppCompatActivity {
     private int bb; // big blind
     private int minraise;
     private int playerStack;
+    private AlertDialog.Builder alert_raise;
 
-    AlertDialog.Builder alert_set_name;
+
 
     public final String TAG = "SOCKET";
-
-
-
     private URI uri = URI.create("https://greenpokerroom.herokuapp.com/"); // live URI
 //    private URI uri = URI.create("http://10.0.2.2:3000"); // test URI
     private Socket socket = IO.socket(uri);
@@ -72,12 +68,20 @@ public class MainActivity extends AppCompatActivity {
         socket.on("PLAYER_ACTION", player_action);
         socket.on("UPDATE_GAME", update_game);
         socket.on("JOIN_CONFIRM", join_confirm);
+        socket.on("PLAYER_JOIN", player_join);
         socket.on("TOAST", game_toast);
+        socket.on("WAITING", game_waiting);
+        socket.on("GAME_RESET", game_reset);
         socket.connect();
         init();
-
 //        socket.emit("test");
 //
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        socket.emit("UPDATE_CLIENT", user_name);
     }
 
     private void init() {
@@ -121,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
         btn_raise = findViewById(R.id.btn_raise);
         btn_fold = findViewById(R.id.btn_fold);
 
+
         community1 = findViewById(R.id.communitycard1);
         community2 = findViewById(R.id.communitycard2);
         community3 = findViewById(R.id.communitycard3);
@@ -133,16 +138,20 @@ public class MainActivity extends AppCompatActivity {
         player4action.setText("");
 
         // Game not started yet, buttons become start game and join game
-//        btn_raise.setText("START GAME");
-//        btn_raise.setOnClickListener(start_game);
+        btn_call.setText("START GAME");
+        btn_call.setOnClickListener(start_game);
+
+        btn_raise.setVisibility(View.GONE);
+        btn_fold.setVisibility(View.GONE);
 
 
 
-        alert_set_name = new AlertDialog.Builder(this);
+        // setting card images for the layout
+        AlertDialog.Builder alert_set_name = new AlertDialog.Builder(this);
         final EditText nameInput = new EditText(this);
         nameInput.setInputType(InputType.TYPE_CLASS_TEXT);
         alert_set_name.setView(nameInput);
-        alert_set_name.setTitle("Enter your name for the game: ");
+        alert_set_name.setTitle("Enter your username: ");
 
         // set up name buttons
         alert_set_name.setPositiveButton("Join/Rejoin", new DialogInterface.OnClickListener() {
@@ -168,422 +177,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         alert_set_name.show();
+        alert_raise = new AlertDialog.Builder(this);
 
 //        socket.emit("test");
     }
-
-    @Override
-    protected void onResume(){
-        super.onResume();
-        socket.emit("UPDATE_CLIENT", user_name);
-    }
-
-    private View.OnClickListener start_game = new View.OnClickListener(){
-        @Override
-        public void onClick(View v) {
-            socket.emit("START_GAME");
-        }
-    };
-
-    private View.OnLongClickListener reset_game = new View.OnLongClickListener(){
-        @Override
-        public boolean onLongClick(View v) {
-            return false;
-        }
-    };
-
-    private View.OnClickListener click_check = new View.OnClickListener(){
-        @Override
-        public void onClick(View v) {
-            try {
-                JSONObject action_json = new JSONObject();
-                action_json.put("playerIndex", player_pos);
-                action_json.put("action", "CHECK");
-                action_json.put("value", 0);
-                socket.emit("PLAYER_ACTION", action_json);
-
-            } catch (JSONException e){
-                e.printStackTrace();
-            }
-        }
-    };
-
-
-
-    private View.OnClickListener click_call = new View.OnClickListener(){
-        @Override
-        public void onClick(View v) {
-            try {
-                JSONObject action_json = new JSONObject();
-                action_json.put("playerIndex", player_pos);
-                action_json.put("action", "CALL");
-                action_json.put("value", currentBet);
-                socket.emit("PLAYER_ACTION", action_json);
-
-            } catch (JSONException e){
-                e.printStackTrace();
-            }
-        }
-    };
-
-    private View.OnClickListener click_raise = new View.OnClickListener(){
-        @Override
-        public void onClick(View v) {
-            AlertDialog.Builder alert_raise = new AlertDialog.Builder(getApplicationContext());
-            LayoutInflater inflater = getLayoutInflater();
-            View dialoglayout = inflater.inflate(R.layout.alert_raise_layout, null);
-            SeekBar seekBar = dialoglayout.findViewById(R.id.seekBarRaise);
-            TextView editRaise = dialoglayout.findViewById(R.id.editTextRaise);;
-
-            editRaise.setText(""+minraise);
-            seekBar.setMax(playerStack);
-            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (fromUser) editRaise.setText(String.valueOf(progress));
-                }
-
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
-
-                }
-
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-                    if (seekBar.getProgress() < minraise){
-                        seekBar.setProgress(minraise);
-                        editRaise.setText(String.valueOf(minraise));
-                    }
-                }
-            });
-
-
-            alert_raise.setView(dialoglayout);
-            alert_set_name.setView(dialoglayout);
-            alert_set_name.setTitle("Enter raise amount: ");
-
-            // set up raise buttons
-            alert_set_name.setPositiveButton("Raise", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    int localRaise = seekBar.getProgress();
-                    if (localRaise < minraise) {
-                        showToast("Invalid Raise Amount");
-                    } else {
-                        try {
-                            JSONObject action_json = new JSONObject();
-                            action_json.put("playerIndex", player_pos);
-                            action_json.put("action", "RAISE");
-                            action_json.put("value", localRaise);
-                            socket.emit("PLAYER_ACTION", action_json);
-
-                        } catch (JSONException e){
-                            e.printStackTrace();
-                        }
-                    }
-
-                }
-            });
-            alert_set_name.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    dialog.dismiss();
-                }
-            });
-            alert_set_name.show();
-        }
-    };
-
-    private View.OnClickListener click_fold = new View.OnClickListener() {
-        @Override
-        public void onClick(View v){
-            try {
-                JSONObject action_json = new JSONObject();
-                action_json.put("playerIndex", player_pos);
-                action_json.put("action", "FOLD");
-                action_json.put("value", 0);
-                socket.emit("PLAYER_ACTION", action_json);
-
-            } catch (JSONException e){
-                e.printStackTrace();
-            }
-        }
-    };
-
-
-    public void showToast(final String toast)
-    {
-        runOnUiThread(() -> Toast.makeText(getApplicationContext(), toast, Toast.LENGTH_SHORT).show());
-    }
-
-    private final Emitter.Listener game_toast = new Emitter.Listener() {
-        @Override
-        public void call(Object... args) {
-            showToast( (String) args[0] );
-        }
-    };
-
-    // event handlers
-    private final Emitter.Listener player_action = new Emitter.Listener() {
-        @Override
-        public void call(Object... args) {
-            JSONObject object = (JSONObject) args[0];
-
-            try {
-                JSONObject game = object.getJSONObject("game");
-                JSONObject action_res = object.getJSONObject("gamestate");
-                if (action_res.getBoolean("isValid")) {
-                    updateGame(object.getJSONObject("game"));
-                    playerAction(object.getJSONObject("gamestate"));
-                } else {
-                    Toast.makeText(getApplicationContext(), "Player Action Error", Toast.LENGTH_LONG).show();
-                }
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-    };
-
-    private void playerAction(JSONObject actionResult) throws JSONException{
-        int actor = actionResult.getInt("playerIndex");
-        String action = actionResult.getString("result");
-        int value = actionResult.getInt("value");
-        if (value > 0) { action.concat(" " + value); }
-        if (toAct == actor) { action = "To Act"; }
-
-        switch (actor){
-            case 0:
-                player1action.setText(action);
-                break;
-            case 1:
-                player2action.setText(action);
-                break;
-            case 2:
-                player3action.setText(action);
-                break;
-            case 3:
-                player4action.setText(action);
-                break;
-        }
-    }
-
-    private final Emitter.Listener update_game = new Emitter.Listener() {
-        @Override
-        public void call(Object... args) {
-            JSONObject object = (JSONObject)args[0];
-            try {
-                if (object.has("notstarted")){
-                    pot.setText("Game not started yet.");
-                }
-//                else if (player_pos == -1){
-//                    pot.setText("You didn't join the game");
-//                }
-                else
-                    updateGame(object);
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-    };
-
-    private void updateGame(JSONObject game) throws JSONException  {
-
-
-
-        // update game state with object here
-        // set game state variables
-        Log.i(TAG, "Updating game info" + game.toString());
-
-        // display current player hand
-        JSONArray players_json = game.getJSONArray("players");
-        JSONObject curplayer;
-
-        // save curplayer info to class and set image in his spot
-        curplayer = players_json.getJSONObject(player_pos); // change to playerpos
-        playerStack = curplayer.getInt("stack");
-        currentBet = game.getInt("currentBet");
-        toAct = game.getInt("toact");
-        sb = game.getInt("sb");
-        bb = game.getInt("bb");
-        minraise = currentBet + bb;
-
-        // set click listeners based on game state
-
-        btn_call.setText("CALL");
-        btn_raise.setText("RAISE");
-        btn_fold.setText("FOLD");
-        btn_call.setOnClickListener(click_call);
-        btn_raise.setOnClickListener(click_raise);
-        btn_fold.setOnClickListener(click_fold);
-
-        // show the player's cards
-
-        switch(player_pos){
-            case 0:
-                player1card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
-                player1card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
-                break;
-            case 1:
-                player2card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
-                player2card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
-                break;
-            case 2:
-                player3card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
-                player3card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
-                break;
-            case 3:
-                player4card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
-                player4card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
-                break;
-        }
-
-
-        // set button, sb, and bb indicators
-        curplayer = players_json.getJSONObject(0);
-        player1name.setText(curplayer.getString("name"));
-        if (game.getInt("button") == 0)
-            player1name.append(" (D)");
-        if (game.getInt("smallblind") == 0) {
-            player1name.append(" (SB)");
-        }
-        if (game.getInt("bigblind") == 0) {
-            player2name.append(" (BB)");
-        }
-        if (toAct == 0){
-            player1action.setText("To Act");
-        }
-        curplayer = players_json.getJSONObject(1);
-        player2name.setText(curplayer.getString("name"));
-        if (game.getInt("button") == 1)
-            player2name.append(" (D)");
-        if (game.getInt("smallblind") == 1) {
-            player2name.append(" (SB)");
-        }
-        if (game.getInt("bigblind") == 1) {
-            player2name.append(" (BB)");
-        }
-        if (toAct == 1){
-            player2action.setText("To Act");
-        }
-        curplayer = players_json.getJSONObject(2);
-        player3name.setText(curplayer.getString("name"));
-        if (game.getInt("button") == 2)
-            player3name.append(" (D)");
-        if (game.getInt("smallblind") == 2) {
-            player3name.append(" (SB)");
-        }
-        if (toAct == 2){
-            player3action.setText("To Act");
-        }
-        if (game.getInt("bigblind") == 2) {
-            player3name.append(" (BB)");
-        }
-        curplayer = players_json.getJSONObject(3);
-        player4name.setText(curplayer.getString("name"));
-        if (game.getInt("button") == 3)
-            player4name.append(" (D)");
-        if (game.getInt("smallblind") == 3) {
-            player4name.append(" (SB)");
-        }
-        if (game.getInt("bigblind") == 3) {
-            player4name.append(" (BB)");
-        }
-        if (toAct == 3){
-            player4action.setText("To Act");
-        }
-        Log.i(TAG, "Players info updated" + players_json.toString());
-
-        // set stacks for each player
-
-        player1stack.setText( String.valueOf(players_json.getJSONObject(0).getInt("stack")) );
-        player2stack.setText( String.valueOf(players_json.getJSONObject(1).getInt("stack")) );
-        if (players_json.length() > 2)
-            player3stack.setText( String.valueOf(players_json.getJSONObject(2).getInt("stack")) );
-        if (players_json.length() > 3)
-            player4stack.setText( String.valueOf(players_json.getJSONObject(3).getInt("stack")) );
-
-
-
-
-        // update board and last action
-
-        JSONArray board = game.getJSONArray("board");
-        // update pot and last raise
-        pot.setText("Pot: " + game.getInt("pot") + " chips");
-        raiseamount.setText(game.getInt("currentBet") + " chips to call");
-
-        // update community cards
-        // flop
-        if (game.getInt("phase") > 0){
-            community1.setImageResource(cardArrayList.get(board.getJSONObject(0).getInt("numval")).getImage());
-            community2.setImageResource(cardArrayList.get(board.getJSONObject(1).getInt("numval")).getImage());
-            community3.setImageResource(cardArrayList.get(board.getJSONObject(2).getInt("numval")).getImage());
-        } else {
-            community1.setImageResource(R.drawable.playingcardback);
-            community2.setImageResource(R.drawable.playingcardback);
-            community3.setImageResource(R.drawable.playingcardback);
-        }
-        // turn
-        if (game.getInt("phase") > 1){
-            community4.setImageResource(cardArrayList.get(board.getJSONObject(3).getInt("numval")).getImage());
-        } else {
-            community4.setImageResource(R.drawable.playingcardback);
-        }
-        // river
-        if (game.getInt("phase") > 2){
-            community5.setImageResource(cardArrayList.get(board.getJSONObject(4).getInt("numval")).getImage());
-        } else {
-            community5.setImageResource(R.drawable.playingcardback);
-        }
-        // showdown
-        if (game.getInt("phase") > 3){
-            // show cards of unfolded players for showdown
-            JSONArray unfolded = game.getJSONArray("unfolded");
-            for (int i=0;i<unfolded.length();i++){
-                int playerINT  = unfolded.getInt(i);
-                if (playerINT == 0){
-                    JSONObject player1 = players_json.getJSONObject(playerINT);
-                    player1card1.setImageResource(cardArrayList.get(player1.getJSONObject("hand1").getInt("numval")).getImage());
-                    player1card2.setImageResource(cardArrayList.get(player1.getJSONObject("hand2").getInt("numval")).getImage());
-                }
-                if (playerINT == 1){
-                    JSONObject player2 = players_json.getJSONObject(playerINT);
-                    player2card1.setImageResource(cardArrayList.get(player2.getJSONObject("hand1").getInt("numval")).getImage());
-                    player2card2.setImageResource(cardArrayList.get(player2.getJSONObject("hand2").getInt("numval")).getImage());
-                }
-                if (playerINT == 2){
-                    JSONObject player3 = players_json.getJSONObject(playerINT);
-                    player3card1.setImageResource(cardArrayList.get(player3.getJSONObject("hand1").getInt("numval")).getImage());
-                    player3card2.setImageResource(cardArrayList.get(player3.getJSONObject("hand2").getInt("numval")).getImage());
-                }
-                if (playerINT == 3){
-                    JSONObject player4 = players_json.getJSONObject(playerINT);
-                    player4card1.setImageResource(cardArrayList.get(player4.getJSONObject("hand1").getInt("numval")).getImage());
-                    player4card2.setImageResource(cardArrayList.get(player4.getJSONObject("hand2").getInt("numval")).getImage());
-                }
-            }
-        }
-
-    }
-
-    private final Emitter.Listener join_confirm = new Emitter.Listener(){
-        @Override
-        public void call(Object... args){
-            JSONObject object = (JSONObject)args[0];
-            try {
-//                if (user_name == object.getString("name")){
-                    user_name = object.getString("name");
-                    player_pos = object.getInt("playerPos");
-                    socket.emit("UPDATE_CLIENT", user_name);
-//                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-    };
-
     // setting card images for the layout
     private void populateCards() {
         cardArrayList = new ArrayList<>();
@@ -707,4 +304,535 @@ public class MainActivity extends AppCompatActivity {
         cardArrayList.add(sample);
 
     }
+
+
+    // ----------Game Control Handlers----------
+    private View.OnClickListener start_game = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            socket.emit("START_GAME");
+        }
+    };
+    private View.OnClickListener click_new_round = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            player1action.setText("");
+            player2action.setText("");
+            player3action.setText("");
+            player4action.setText("");
+            socket.emit("NEW_ROUND");
+        }
+    };
+    private View.OnClickListener click_reset_game = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            final TextView resetgame = new TextView(getApplicationContext());
+            resetgame.setText("Are you sure you want to reset the game? This will end the app for all players");
+            alert_raise.setView(resetgame);
+            alert_raise.setTitle("Restart Game: ");
+
+            // set up name buttons
+            alert_raise.setPositiveButton("RESET GAME", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    socket.emit("RESET_GAME");
+                }
+            });
+            alert_raise.setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                }
+            });
+            alert_raise.show();
+        }
+    };
+
+    // ----------Action Click Handlers----------
+    private View.OnClickListener click_check = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            try {
+                JSONObject action_json = new JSONObject();
+                action_json.put("playerIndex", player_pos);
+                action_json.put("action", "CHECK");
+                action_json.put("value", 0);
+                socket.emit("PLAYER_ACTION", action_json);
+
+            } catch (JSONException e){
+                e.printStackTrace();
+            }
+        }
+    };
+    private View.OnClickListener click_call = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            try {
+                JSONObject action_json = new JSONObject();
+                action_json.put("playerIndex", player_pos);
+                action_json.put("action", "CALL");
+                action_json.put("value", currentBet);
+                socket.emit("PLAYER_ACTION", action_json);
+
+            } catch (JSONException e){
+                e.printStackTrace();
+            }
+        }
+    };
+    private View.OnClickListener click_sbcall = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            try {
+                JSONObject action_json = new JSONObject();
+                action_json.put("playerIndex", player_pos);
+                action_json.put("action", "CALL");
+                action_json.put("value", sb);
+                socket.emit("PLAYER_ACTION", action_json);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    private View.OnClickListener click_raise = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            LayoutInflater inflater = getLayoutInflater();
+            View dialoglayout = inflater.inflate(R.layout.alert_raise_layout, null);
+            SeekBar seekBar = dialoglayout.findViewById(R.id.seekBarRaise);
+            TextView editRaise = dialoglayout.findViewById(R.id.editTextRaise);;
+            alert_raise.setTitle("Enter Raise Amount");
+            alert_raise.setView(dialoglayout);
+
+            editRaise.setText(""+minraise);
+            seekBar.setMax(playerStack);
+            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (fromUser) editRaise.setText(String.valueOf(progress));
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    if (seekBar.getProgress() < minraise){
+                        seekBar.setProgress(minraise);
+                        editRaise.setText(String.valueOf(minraise));
+                    }
+                }
+            });
+            // set up raise buttons
+            alert_raise.setPositiveButton("Raise", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    int localRaise = seekBar.getProgress();
+                    if (localRaise < minraise) {
+                        showToast("Invalid Raise Amount");
+                    } else {
+                        try {
+                            JSONObject action_json = new JSONObject();
+                            action_json.put("playerIndex", player_pos);
+                            action_json.put("action", "RAISE");
+                            action_json.put("value", localRaise);
+                            socket.emit("PLAYER_ACTION", action_json);
+
+                        } catch (JSONException e){
+                            e.printStackTrace();
+                        }
+                    }
+
+                }
+            });
+            alert_raise.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+            alert_raise.show();
+        }
+    };
+    private View.OnClickListener click_fold = new View.OnClickListener() {
+        @Override
+        public void onClick(View v){
+            try {
+                JSONObject action_json = new JSONObject();
+                action_json.put("playerIndex", player_pos);
+                action_json.put("action", "FOLD");
+                action_json.put("value", 0);
+                socket.emit("PLAYER_ACTION", action_json);
+
+            } catch (JSONException e){
+                e.printStackTrace();
+            }
+        }
+    };
+
+    // ----------Event Handlers----------
+    private final Emitter.Listener game_toast = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            showToast( (String) args[0] );
+        }
+    };
+    private final Emitter.Listener update_game = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            JSONObject object = (JSONObject)args[0];
+            try {
+                if (object.has("notstarted")){
+                    pot.setText("Game not started yet.");
+                }
+                else
+                    updateGame(object);
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    private final Emitter.Listener player_action = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            JSONObject object = (JSONObject) args[0];
+
+            try {
+                JSONObject game = object.getJSONObject("game");
+                JSONObject action_res = object.getJSONObject("gamestate");
+                if (action_res.getBoolean("isValid")) {
+                    updateGame(game);
+                    playerAction(action_res);
+                }
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    private final Emitter.Listener join_confirm = new Emitter.Listener(){
+        @Override
+        public void call(Object... args){
+            JSONObject object = (JSONObject)args[0];
+            try {
+//                if (user_name == object.getString("name")){
+                user_name = object.getString("name");
+                player_pos = object.getInt("playerPos");
+                socket.emit("UPDATE_CLIENT", user_name);
+//                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    private final Emitter.Listener player_join = new Emitter.Listener(){
+        @Override
+        public void call(Object... args){
+            JSONObject object = (JSONObject)args[0];
+            try {
+                switch(object.getInt("playerPos")){
+                    case 0:
+                        player1name.setText(object.getString("name"));
+                        player1stack.setText("Waiting");
+                        break;
+                    case 1:
+                        player2name.setText(object.getString("name"));
+                        player2stack.setText("Waiting");
+                        break;
+                    case 2:
+                        player3name.setText(object.getString("name"));
+                        player3stack.setText("Waiting");
+                        break;
+                    case 3:
+                        player4name.setText(object.getString("name"));
+                        player4stack.setText("Waiting");
+                        break;
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    private final Emitter.Listener game_waiting = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            pot.setText("Waiting for start...");
+            try {
+                JSONArray playersIN = (JSONArray) args[0];
+                if (playersIN.length() > 0){
+                    player1name.setText(playersIN.getJSONObject(0).getString("name"));
+                    player1stack.setText("Waiting");
+                }
+                if (playersIN.length() > 1){
+                    player2name.setText(playersIN.getJSONObject(1).getString("name"));
+                    player2stack.setText("Waiting");
+                }
+                if (playersIN.length() > 2){
+                    player3name.setText(playersIN.getJSONObject(2).getString("name"));
+                    player3stack.setText("Waiting");
+                }
+                if (playersIN.length() > 3){
+                    player4name.setText(playersIN.getJSONObject(3).getString("name"));
+                    player4stack.setText("Waiting");
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+
+            Log.i(TAG, "WAITING SOCKET EVENT");
+        }
+    };
+    private final Emitter.Listener game_reset = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            showToast("GAME WAS RESET");
+            finish();
+        }
+    };
+
+    public void showToast(final String toast){
+        runOnUiThread(() -> Toast.makeText(getApplicationContext(), toast, Toast.LENGTH_SHORT).show());
+    }
+    private void updateGame(JSONObject game) throws JSONException  {
+
+        // update game state with object here
+        // set game state variables
+        Log.i(TAG, "UPDATE FOR PHASE " + String.valueOf(game.getInt("phase")));
+        Log.i(TAG, "Updating game info" + game.toString());
+
+        // display current player hand
+        JSONArray players_json = game.getJSONArray("players");
+        JSONObject curplayer;
+
+        // save curplayer info to class and set image in his spot
+        curplayer = players_json.getJSONObject(player_pos); // change to playerpos
+        playerStack = curplayer.getInt("stack");
+        currentBet = game.getInt("currentBet");
+        toAct = game.getInt("toact");
+        sb = game.getInt("sb");
+        bb = game.getInt("bb");
+        minraise = currentBet + bb;
+
+        // set click listeners based on game state
+
+        btn_call.setText("CALL");
+        btn_call.setOnClickListener(click_call);
+        if (player_pos == game.getInt("smallblind") && currentBet == bb ) //small blind call if bet is still bb
+            btn_call.setOnClickListener(click_sbcall);
+
+        if (currentBet == 0 ||
+                (currentBet == bb && game.getInt("phase") == 0
+                        && player_pos == game.getInt("bigblind") )
+                ) {
+            btn_call.setText("CHECK");
+            btn_call.setOnClickListener(click_check);
+        }
+
+        runOnUiThread(() -> {
+            btn_raise.setText("RAISE");
+            btn_raise.setOnClickListener(click_raise);
+            btn_raise.setVisibility(View.VISIBLE);
+            btn_fold.setOnClickListener(click_fold);
+            btn_fold.setText("FOLD");
+            btn_fold.setVisibility(View.VISIBLE);
+            try {
+                if (game.getInt("phase") > 3) {
+                    btn_call.setText("NEXT");
+                    btn_call.setOnClickListener(click_new_round);
+                    btn_raise.setText("RESET");
+                    btn_raise.setOnClickListener(click_reset_game);
+                    btn_raise.setVisibility(View.VISIBLE);
+                    btn_fold.setOnClickListener(click_fold);
+                    btn_fold.setVisibility(View.GONE);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+        });
+
+        // show the player's cards and make sure cards are hidden
+        player1card1.setImageResource(R.drawable.playingcardback);
+        player1card2.setImageResource(R.drawable.playingcardback);
+        player2card1.setImageResource(R.drawable.playingcardback);
+        player2card2.setImageResource(R.drawable.playingcardback);
+        player3card1.setImageResource(R.drawable.playingcardback);
+        player3card2.setImageResource(R.drawable.playingcardback);
+        player4card1.setImageResource(R.drawable.playingcardback);
+        player4card2.setImageResource(R.drawable.playingcardback);
+        switch(player_pos){
+            case 0:
+                player1card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+                player1card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+                break;
+            case 1:
+                player2card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+                player2card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+                break;
+            case 2:
+                player3card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+                player3card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+                break;
+            case 3:
+                player4card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+                player4card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+                break;
+        }
+
+
+        // set button, sb, and bb indicators
+        curplayer = players_json.getJSONObject(0);
+        player1name.setText(curplayer.getString("name"));
+        if (game.getInt("button") == 0)
+            player1name.append(" (D)");
+        if (game.getInt("smallblind") == 0) {
+            player1name.append(" (SB)");
+        }
+        if (game.getInt("bigblind") == 0) {
+            player2name.append(" (BB)");
+        }
+        if (toAct == 0){
+            player1action.setText("To Act");
+        }
+        curplayer = players_json.getJSONObject(1);
+        player2name.setText(curplayer.getString("name"));
+        if (game.getInt("button") == 1)
+            player2name.append(" (D)");
+        if (game.getInt("smallblind") == 1) {
+            player2name.append(" (SB)");
+        }
+        if (game.getInt("bigblind") == 1) {
+            player2name.append(" (BB)");
+        }
+        if (toAct == 1){
+            player2action.setText("To Act");
+        }
+        curplayer = players_json.getJSONObject(2);
+        player3name.setText(curplayer.getString("name"));
+        if (game.getInt("button") == 2)
+            player3name.append(" (D)");
+        if (game.getInt("smallblind") == 2) {
+            player3name.append(" (SB)");
+        }
+        if (toAct == 2){
+            player3action.setText("To Act");
+        }
+        if (game.getInt("bigblind") == 2) {
+            player3name.append(" (BB)");
+        }
+        curplayer = players_json.getJSONObject(3);
+        player4name.setText(curplayer.getString("name"));
+        if (game.getInt("button") == 3)
+            player4name.append(" (D)");
+        if (game.getInt("smallblind") == 3) {
+            player4name.append(" (SB)");
+        }
+        if (game.getInt("bigblind") == 3) {
+            player4name.append(" (BB)");
+        }
+        if (toAct == 3){
+            player4action.setText("To Act");
+        }
+        Log.i(TAG, "Players info updated" + players_json.toString());
+
+        // set stacks for each player
+
+        player1stack.setText( String.valueOf(players_json.getJSONObject(0).getInt("stack")) );
+        player2stack.setText( String.valueOf(players_json.getJSONObject(1).getInt("stack")) );
+        if (players_json.length() > 2)
+            player3stack.setText( String.valueOf(players_json.getJSONObject(2).getInt("stack")) );
+        if (players_json.length() > 3)
+            player4stack.setText( String.valueOf(players_json.getJSONObject(3).getInt("stack")) );
+
+
+
+
+        // update board and last action
+
+        JSONArray board = game.getJSONArray("board");
+        // update pot and last raise
+        pot.setText("Pot: " + game.getInt("pot") + " chips");
+        raiseamount.setText(game.getInt("currentBet") + " chips to call");
+
+        // update community cards
+        // flop
+        if (game.getInt("phase") > 0){
+            community1.setImageResource(cardArrayList.get(board.getJSONObject(0).getInt("numval")).getImage());
+            community2.setImageResource(cardArrayList.get(board.getJSONObject(1).getInt("numval")).getImage());
+            community3.setImageResource(cardArrayList.get(board.getJSONObject(2).getInt("numval")).getImage());
+        } else {
+            community1.setImageResource(R.drawable.playingcardback);
+            community2.setImageResource(R.drawable.playingcardback);
+            community3.setImageResource(R.drawable.playingcardback);
+        }
+        // turn
+        if (game.getInt("phase") > 1){
+            community4.setImageResource(cardArrayList.get(board.getJSONObject(3).getInt("numval")).getImage());
+        } else {
+            community4.setImageResource(R.drawable.playingcardback);
+        }
+        // river
+        if (game.getInt("phase") > 2){
+            community5.setImageResource(cardArrayList.get(board.getJSONObject(4).getInt("numval")).getImage());
+        } else {
+            community5.setImageResource(R.drawable.playingcardback);
+        }
+        // showdown
+        if (game.getInt("phase") > 3){
+            // show cards of unfolded players for showdown
+            JSONArray unfolded = game.getJSONArray("notfolded");
+            for (int i=0;i<unfolded.length();i++){
+                int playerINT  = unfolded.getInt(i);
+                if (playerINT == 0){
+                    JSONObject player1 = players_json.getJSONObject(playerINT);
+                    player1card1.setImageResource(cardArrayList.get(player1.getJSONObject("hand1").getInt("numval")).getImage());
+                    player1card2.setImageResource(cardArrayList.get(player1.getJSONObject("hand2").getInt("numval")).getImage());
+                }
+                if (playerINT == 1){
+                    JSONObject player2 = players_json.getJSONObject(playerINT);
+                    player2card1.setImageResource(cardArrayList.get(player2.getJSONObject("hand1").getInt("numval")).getImage());
+                    player2card2.setImageResource(cardArrayList.get(player2.getJSONObject("hand2").getInt("numval")).getImage());
+                }
+                if (playerINT == 2){
+                    JSONObject player3 = players_json.getJSONObject(playerINT);
+                    player3card1.setImageResource(cardArrayList.get(player3.getJSONObject("hand1").getInt("numval")).getImage());
+                    player3card2.setImageResource(cardArrayList.get(player3.getJSONObject("hand2").getInt("numval")).getImage());
+                }
+                if (playerINT == 3){
+                    JSONObject player4 = players_json.getJSONObject(playerINT);
+                    player4card1.setImageResource(cardArrayList.get(player4.getJSONObject("hand1").getInt("numval")).getImage());
+                    player4card2.setImageResource(cardArrayList.get(player4.getJSONObject("hand2").getInt("numval")).getImage());
+                }
+            }
+            pot.setText(game.getString("winnerString"));
+        }
+        Log.i(TAG, "UPDATE COMPLETE ");
+
+    }
+    private void playerAction(JSONObject actionResult) throws JSONException{
+        int actor = actionResult.getInt("playerIndex");
+        String action = actionResult.getString("result");
+        int value = actionResult.getInt("value");
+        if (value > 0) { action.concat(" " + value); }
+        if (toAct == actor) { action = "To Act"; }
+
+        switch (actor){
+            case 0:
+                player1action.setText(action);
+                break;
+            case 1:
+                player2action.setText(action);
+                break;
+            case 2:
+                player3action.setText(action);
+                break;
+            case 3:
+                player4action.setText(action);
+                break;
+        }
+    }
+
+
 }

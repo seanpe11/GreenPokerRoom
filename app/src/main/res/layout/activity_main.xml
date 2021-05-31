@@ -51,7 +51,7 @@
             android:id="@+id/player1stack"
             android:layout_width="match_parent"
             android:layout_height="20dp"
-            android:text="Player 1 Stack" />
+            android:text="Seat Empty" />
 
         <TextView
             android:id="@+id/player1action"
@@ -80,7 +80,7 @@
             android:id="@+id/player2stack"
             android:layout_width="match_parent"
             android:layout_height="20dp"
-            android:text="Player 2 Stack" />
+            android:text="Seat Empty" />
 
         <TextView
             android:id="@+id/player2action"
@@ -147,7 +147,7 @@
             android:id="@+id/player4stack"
             android:layout_width="match_parent"
             android:layout_height="20dp"
-            android:text="Player 4 Stack" />
+            android:text="Seat Empty" />
 
         <TextView
             android:id="@+id/player4action"
@@ -177,7 +177,7 @@
             android:id="@+id/player3stack"
             android:layout_width="match_parent"
             android:layout_height="20dp"
-            android:text="Player 3 Stack" />
+            android:text="Seat Empty" />
 
         <TextView
             android:id="@+id/player3action"
@@ -270,7 +270,8 @@
                 android:layout_margin="10dp"
                 android:layout_weight="1"
                 android:text="CALL"
-                app:backgroundTint="#4CAF50" />
+                app:backgroundTint="#4CAF50"
+                tools:visibility="visible" />
 
             <Button
                 android:id="@+id/btn_raise"
