@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -40,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView pot;
     private TextView raiseamount;
     private Button btn_call, btn_raise, btn_fold;
-    private SeekBar seekBar;
 
     private String user_name;
     private int player_pos = -1; // index of player who has connected
@@ -126,7 +126,6 @@ public class MainActivity extends AppCompatActivity {
         community3 = findViewById(R.id.communitycard3);
         community4 = findViewById(R.id.communitycard4);
         community5 = findViewById(R.id.communitycard5);
-        seekBar = findViewById(R.id.seekBar);
 
         player1action.setText("");
         player2action.setText("");
@@ -134,10 +133,9 @@ public class MainActivity extends AppCompatActivity {
         player4action.setText("");
 
         // Game not started yet, buttons become start game and join game
-        btn_raise.setText("START GAME");
-        btn_raise.setOnClickListener(start_game);
+//        btn_raise.setText("START GAME");
+//        btn_raise.setOnClickListener(start_game);
 
-        seekBar.setVisibility(View.GONE);
 
         alert_set_name = new AlertDialog.Builder(this);
         final EditText nameInput = new EditText(this);
@@ -193,15 +191,32 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private View.OnClickListener click_check = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            try {
+                JSONObject action_json = new JSONObject();
+                action_json.put("playerIndex", player_pos);
+                action_json.put("action", "CHECK");
+                action_json.put("value", 0);
+                socket.emit("PLAYER_ACTION", action_json);
+
+            } catch (JSONException e){
+                e.printStackTrace();
+            }
+        }
+    };
+
+
 
     private View.OnClickListener click_call = new View.OnClickListener(){
         @Override
         public void onClick(View v) {
             try {
                 JSONObject action_json = new JSONObject();
-                action_json.put("playerIndex", 3);
+                action_json.put("playerIndex", player_pos);
                 action_json.put("action", "CALL");
-                action_json.put("value", 2);
+                action_json.put("value", currentBet);
                 socket.emit("PLAYER_ACTION", action_json);
 
             } catch (JSONException e){
@@ -213,7 +228,50 @@ public class MainActivity extends AppCompatActivity {
     private View.OnClickListener click_raise = new View.OnClickListener(){
         @Override
         public void onClick(View v) {
-            seekBar.setVisibility(View.VISIBLE);
+            AlertDialog.Builder alert_raise = new AlertDialog.Builder(getApplicationContext());
+            LayoutInflater inflater = getLayoutInflater();
+            View dialoglayout = inflater.inflate(R.layout.alert_raise_layout, null);
+            SeekBar seekBar = dialoglayout.findViewById(R.id.seekBarRaise);
+            TextView editRaise = dialoglayout.findViewById(R.id.editTextRaise);;
+
+            editRaise.setText(""+minraise);
+            seekBar.setMax(playerStack);
+            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (fromUser) editRaise.setText(String.valueOf(progress));
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+
+                }
+            });
+
+
+            alert_raise.setView(dialoglayout);
+            alert_set_name.setView(dialoglayout);
+            alert_set_name.setTitle("Enter raise amount: ");
+
+            // set up name buttons
+            alert_set_name.setPositiveButton("Raise", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+            alert_set_name.setNegativeButton("Call", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+            alert_set_name.show();
         }
     };
 
@@ -222,9 +280,9 @@ public class MainActivity extends AppCompatActivity {
         public void onClick(View v){
             try {
                 JSONObject action_json = new JSONObject();
-                action_json.put("playerIndex", 1);
-                action_json.put("action", "CALL");
-                action_json.put("value", 1);
+                action_json.put("playerIndex", player_pos);
+                action_json.put("action", "FOLD");
+                action_json.put("value", 0);
                 socket.emit("PLAYER_ACTION", action_json);
 
             } catch (JSONException e){
@@ -309,15 +367,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void updateGame(JSONObject game) throws JSONException  {
-        // set click listeners based on game state
 
-        btn_call.setText("CALL/CHECK");
-//        btn_call.setVisibility(View.VISIBLE);
-        btn_raise.setText("RAISE");
-        btn_fold.setText("FOLD");
-        btn_call.setOnClickListener(click_call);
-        btn_raise.setOnClickListener(click_raise);
-        btn_fold.setOnClickListener(click_fold);
 
 
         // update game state with object here
@@ -336,6 +386,17 @@ public class MainActivity extends AppCompatActivity {
         sb = game.getInt("sb");
         bb = game.getInt("bb");
         minraise = currentBet + bb;
+
+        // set click listeners based on game state
+
+        btn_call.setText("CALL");
+        btn_raise.setText("RAISE");
+        btn_fold.setText("FOLD");
+        btn_call.setOnClickListener(click_call);
+        btn_raise.setOnClickListener(click_raise);
+        btn_fold.setOnClickListener(click_fold);
+
+        // show the player's cards
 
         switch(player_pos){
             case 0:
@@ -356,7 +417,6 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
 
-        // update player names and chip counts
 
         // set button, sb, and bb indicators
         curplayer = players_json.getJSONObject(0);
@@ -426,7 +486,6 @@ public class MainActivity extends AppCompatActivity {
 
 
         // update board and last action
-
 
         JSONArray board = game.getJSONArray("board");
         // update pot and last raise
