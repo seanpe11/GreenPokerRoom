@@ -137,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
 //        btn_raise.setOnClickListener(start_game);
 
 
+
         alert_set_name = new AlertDialog.Builder(this);
         final EditText nameInput = new EditText(this);
         nameInput.setInputType(InputType.TYPE_CLASS_TEXT);
@@ -152,8 +153,8 @@ public class MainActivity extends AppCompatActivity {
                     JSONObject player = new JSONObject();
                     player.put("name", user_name);
                     socket.emit("PLAYER_JOIN", player);
-                    Log.i(TAG, "JOIN REQUEST");
-                    socket.emit("UPDATE_CLIENT");
+                    Log.i(TAG, "JOIN REQUEST for " + user_name);
+                    socket.emit("UPDATE_CLIENT", user_name);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -168,13 +169,13 @@ public class MainActivity extends AppCompatActivity {
         });
         alert_set_name.show();
 
-
+//        socket.emit("test");
     }
 
     @Override
     protected void onResume(){
         super.onResume();
-        socket.emit("UPDATE_CLIENT");
+        socket.emit("UPDATE_CLIENT", user_name);
     }
 
     private View.OnClickListener start_game = new View.OnClickListener(){
@@ -375,6 +376,9 @@ public class MainActivity extends AppCompatActivity {
                 if (object.has("notstarted")){
                     pot.setText("Game not started yet.");
                 }
+//                else if (player_pos == -1){
+//                    pot.setText("You didn't join the game");
+//                }
                 else
                     updateGame(object);
 
@@ -569,8 +573,11 @@ public class MainActivity extends AppCompatActivity {
         public void call(Object... args){
             JSONObject object = (JSONObject)args[0];
             try {
-                player_pos = object.getInt("playerPos");
-                user_name = object.getString("name");
+//                if (user_name == object.getString("name")){
+                    user_name = object.getString("name");
+                    player_pos = object.getInt("playerPos");
+                    socket.emit("UPDATE_CLIENT", user_name);
+//                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
