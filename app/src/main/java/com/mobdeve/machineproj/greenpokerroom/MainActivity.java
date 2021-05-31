@@ -1,8 +1,13 @@
 package com.mobdeve.machineproj.greenpokerroom;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -38,12 +43,15 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar seekBar;
 
     private String user_name;
-    private int player_pos; // index of player who has connected
+    private int player_pos = -1; // index of player who has connected
     private int currentBet; // value to bet
     private int toAct; // index of player to act
     private int sb; // small blind
     private int bb; // big blind
     private int minraise;
+    private int playerStack;
+
+    AlertDialog.Builder alert_set_name;
 
     public final String TAG = "SOCKET";
 
@@ -64,31 +72,12 @@ public class MainActivity extends AppCompatActivity {
         socket.on("PLAYER_ACTION", player_action);
         socket.on("UPDATE_GAME", update_game);
         socket.on("JOIN_CONFIRM", join_confirm);
-        socket.on("ERROR", game_error);
+        socket.on("TOAST", game_toast);
         socket.connect();
         init();
-        try {
-            JSONObject player1 = new JSONObject();
-            player1.put("name", "Sean");
-            socket.emit("PLAYER_JOIN", player1);
-            JSONObject player2 = new JSONObject();
-            player2.put("name", "Rasheed");
-            socket.emit("PLAYER_JOIN", player2);
-            JSONObject player3 = new JSONObject();
-            player3.put("name", "Jolo");
-            socket.emit("PLAYER_JOIN", player3);
-            JSONObject player4 = new JSONObject();
-            player4.put("name", "Bags");
-            socket.emit("PLAYER_JOIN", player4);
-            JSONObject blinds = new JSONObject();
-            blinds.put("sb", 1);
-            blinds.put("bb", 2);
-            socket.emit("START_GAME", blinds);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
 
-        
+//        socket.emit("test");
+//
     }
 
     private void init() {
@@ -100,6 +89,14 @@ public class MainActivity extends AppCompatActivity {
         player3card2 = findViewById(R.id.player3card2);
         player4card1 = findViewById(R.id.player4card1);
         player4card2 = findViewById(R.id.player4card2);
+        player1card1.setImageResource(R.drawable.playingcardback);
+        player1card2.setImageResource(R.drawable.playingcardback);
+        player2card1.setImageResource(R.drawable.playingcardback);
+        player2card2.setImageResource(R.drawable.playingcardback);
+        player3card1.setImageResource(R.drawable.playingcardback);
+        player3card2.setImageResource(R.drawable.playingcardback);
+        player4card1.setImageResource(R.drawable.playingcardback);
+        player4card2.setImageResource(R.drawable.playingcardback);
 
         player1name = findViewById(R.id.player1name);
         player1stack = findViewById(R.id.player1stack);
@@ -136,60 +133,128 @@ public class MainActivity extends AppCompatActivity {
         player3action.setText("");
         player4action.setText("");
 
-        btn_call.setOnClickListener(action_call);
+        // Game not started yet, buttons become start game and join game
+        btn_raise.setText("START GAME");
+        btn_raise.setOnClickListener(start_game);
 
         seekBar.setVisibility(View.GONE);
+
+        alert_set_name = new AlertDialog.Builder(this);
+        final EditText nameInput = new EditText(this);
+        nameInput.setInputType(InputType.TYPE_CLASS_TEXT);
+        alert_set_name.setView(nameInput);
+        alert_set_name.setTitle("Enter your name for the game: ");
+
+        // set up name buttons
+        alert_set_name.setPositiveButton("Join/Rejoin", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                user_name = nameInput.getText().toString();
+                try {
+                    JSONObject player = new JSONObject();
+                    player.put("name", user_name);
+                    socket.emit("PLAYER_JOIN", player);
+                    Log.i(TAG, "JOIN REQUEST");
+                    socket.emit("UPDATE_CLIENT");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        });
+        alert_set_name.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                finish();
+            }
+        });
+        alert_set_name.show();
+
+
     }
 
-    private View.OnClickListener action_call = new View.OnClickListener(){
+    @Override
+    protected void onResume(){
+        super.onResume();
+        socket.emit("UPDATE_CLIENT");
+    }
+
+    private View.OnClickListener start_game = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            socket.emit("START_GAME");
+        }
+    };
+
+    private View.OnLongClickListener reset_game = new View.OnLongClickListener(){
+        @Override
+        public boolean onLongClick(View v) {
+            return false;
+        }
+    };
+
+
+    private View.OnClickListener click_call = new View.OnClickListener(){
         @Override
         public void onClick(View v) {
             try {
                 JSONObject action_json = new JSONObject();
-                action_json.put("playerIndex", 0);
+                action_json.put("playerIndex", 3);
                 action_json.put("action", "CALL");
                 action_json.put("value", 2);
                 socket.emit("PLAYER_ACTION", action_json);
 
-                action_json = new JSONObject();
-                action_json.put("playerIndex", 1);
-                action_json.put("action", "CALL");
-                action_json.put("value", 2);
-                socket.emit("PLAYER_ACTION", action_json);
-
-                action_json = new JSONObject();
-                action_json.put("playerIndex", 2);
-                action_json.put("action", "CALL");
-                action_json.put("value", 1);
-                socket.emit("PLAYER_ACTION", action_json);
-
-                action_json = new JSONObject();
-                action_json.put("playerIndex", 2);
-                action_json.put("action", "CHECK");
-                action_json.put("value", 1);
-                socket.emit("PLAYER_ACTION", action_json);
             } catch (JSONException e){
                 e.printStackTrace();
             }
         }
     };
 
-    private Emitter.Listener game_error = new Emitter.Listener() {
+    private View.OnClickListener click_raise = new View.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            seekBar.setVisibility(View.VISIBLE);
+        }
+    };
+
+    private View.OnClickListener click_fold = new View.OnClickListener() {
+        @Override
+        public void onClick(View v){
+            try {
+                JSONObject action_json = new JSONObject();
+                action_json.put("playerIndex", 1);
+                action_json.put("action", "CALL");
+                action_json.put("value", 1);
+                socket.emit("PLAYER_ACTION", action_json);
+
+            } catch (JSONException e){
+                e.printStackTrace();
+            }
+        }
+    };
+
+
+    public void showToast(final String toast)
+    {
+        runOnUiThread(() -> Toast.makeText(getApplicationContext(), toast, Toast.LENGTH_SHORT).show());
+    }
+
+    private final Emitter.Listener game_toast = new Emitter.Listener() {
         @Override
         public void call(Object... args) {
-            Log.i(TAG, "error!");
+            showToast( (String) args[0] );
         }
     };
 
     // event handlers
-    private Emitter.Listener player_action = new Emitter.Listener() {
+    private final Emitter.Listener player_action = new Emitter.Listener() {
         @Override
         public void call(Object... args) {
             JSONObject object = (JSONObject) args[0];
 
             try {
                 JSONObject game = object.getJSONObject("game");
-                JSONObject action_res = game.getJSONObject("gamestate");
+                JSONObject action_res = object.getJSONObject("gamestate");
                 if (action_res.getBoolean("isValid")) {
                     updateGame(object.getJSONObject("game"));
                     playerAction(object.getJSONObject("gamestate"));
@@ -226,12 +291,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private Emitter.Listener update_game = new Emitter.Listener() {
+    private final Emitter.Listener update_game = new Emitter.Listener() {
         @Override
         public void call(Object... args) {
             JSONObject object = (JSONObject)args[0];
             try {
-                updateGame(object);
+                if (object.has("notstarted")){
+                    pot.setText("Game not started yet.");
+                }
+                else
+                    updateGame(object);
 
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -242,21 +311,52 @@ public class MainActivity extends AppCompatActivity {
     private void updateGame(JSONObject game) throws JSONException  {
         // set click listeners based on game state
 
+        btn_call.setText("CALL/CHECK");
+//        btn_call.setVisibility(View.VISIBLE);
+        btn_raise.setText("RAISE");
+        btn_fold.setText("FOLD");
+        btn_call.setOnClickListener(click_call);
+        btn_raise.setOnClickListener(click_raise);
+        btn_fold.setOnClickListener(click_fold);
+
 
         // update game state with object here
         // set game state variables
         Log.i(TAG, "Updating game info" + game.toString());
 
+        // display current player hand
+        JSONArray players_json = game.getJSONArray("players");
+        JSONObject curplayer;
+
+        // save curplayer info to class and set image in his spot
+        curplayer = players_json.getJSONObject(player_pos); // change to playerpos
+        playerStack = curplayer.getInt("stack");
         currentBet = game.getInt("currentBet");
         toAct = game.getInt("toact");
         sb = game.getInt("sb");
         bb = game.getInt("bb");
         minraise = currentBet + bb;
 
-        // update player names and chip counts
+        switch(player_pos){
+            case 0:
+                player1card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+                player1card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+                break;
+            case 1:
+                player2card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+                player2card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+                break;
+            case 2:
+                player3card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+                player3card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+                break;
+            case 3:
+                player4card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
+                player4card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+                break;
+        }
 
-        JSONArray players_json = game.getJSONArray("players");
-        JSONObject curplayer;
+        // update player names and chip counts
 
         // set button, sb, and bb indicators
         curplayer = players_json.getJSONObject(0);
@@ -269,6 +369,9 @@ public class MainActivity extends AppCompatActivity {
         if (game.getInt("bigblind") == 0) {
             player2name.append(" (BB)");
         }
+        if (toAct == 0){
+            player1action.setText("To Act");
+        }
         curplayer = players_json.getJSONObject(1);
         player2name.setText(curplayer.getString("name"));
         if (game.getInt("button") == 1)
@@ -279,12 +382,18 @@ public class MainActivity extends AppCompatActivity {
         if (game.getInt("bigblind") == 1) {
             player2name.append(" (BB)");
         }
+        if (toAct == 1){
+            player2action.setText("To Act");
+        }
         curplayer = players_json.getJSONObject(2);
         player3name.setText(curplayer.getString("name"));
         if (game.getInt("button") == 2)
             player3name.append(" (D)");
         if (game.getInt("smallblind") == 2) {
             player3name.append(" (SB)");
+        }
+        if (toAct == 2){
+            player3action.setText("To Act");
         }
         if (game.getInt("bigblind") == 2) {
             player3name.append(" (BB)");
@@ -299,6 +408,9 @@ public class MainActivity extends AppCompatActivity {
         if (game.getInt("bigblind") == 3) {
             player4name.append(" (BB)");
         }
+        if (toAct == 3){
+            player4action.setText("To Act");
+        }
         Log.i(TAG, "Players info updated" + players_json.toString());
 
         // set stacks for each player
@@ -311,10 +423,7 @@ public class MainActivity extends AppCompatActivity {
             player4stack.setText( String.valueOf(players_json.getJSONObject(3).getInt("stack")) );
 
 
-        // display current player hand
-        curplayer = players_json.getJSONObject(0); // change to playerpos
-        player1card1.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand1").getInt("numval") ).getImage() );
-        player1card2.setImageResource( cardArrayList.get( curplayer.getJSONObject("hand2").getInt("numval") ).getImage() );
+
 
         // update board and last action
 
@@ -378,13 +487,13 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private Emitter.Listener join_confirm = new Emitter.Listener(){
+    private final Emitter.Listener join_confirm = new Emitter.Listener(){
         @Override
         public void call(Object... args){
             JSONObject object = (JSONObject)args[0];
             try {
                 player_pos = object.getInt("playerPos");
-                user_name = object.getString("playerName");
+                user_name = object.getString("name");
             } catch (JSONException e) {
                 e.printStackTrace();
             }
