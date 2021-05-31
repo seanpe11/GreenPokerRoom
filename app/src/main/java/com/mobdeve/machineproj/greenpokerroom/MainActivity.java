@@ -249,7 +249,10 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {
-
+                    if (seekBar.getProgress() < minraise){
+                        seekBar.setProgress(minraise);
+                        editRaise.setText(String.valueOf(minraise));
+                    }
                 }
             });
 
@@ -258,14 +261,29 @@ public class MainActivity extends AppCompatActivity {
             alert_set_name.setView(dialoglayout);
             alert_set_name.setTitle("Enter raise amount: ");
 
-            // set up name buttons
+            // set up raise buttons
             alert_set_name.setPositiveButton("Raise", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    dialog.dismiss();
+                    int localRaise = seekBar.getProgress();
+                    if (localRaise < minraise) {
+                        showToast("Invalid Raise Amount");
+                    } else {
+                        try {
+                            JSONObject action_json = new JSONObject();
+                            action_json.put("playerIndex", player_pos);
+                            action_json.put("action", "RAISE");
+                            action_json.put("value", localRaise);
+                            socket.emit("PLAYER_ACTION", action_json);
+
+                        } catch (JSONException e){
+                            e.printStackTrace();
+                        }
+                    }
+
                 }
             });
-            alert_set_name.setNegativeButton("Call", new DialogInterface.OnClickListener() {
+            alert_set_name.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     dialog.dismiss();
